@@ -19,6 +19,13 @@ import blosc
 import argparse
 from fixed_replay_buffer import FixedReplayBuffer
 
+#change
+import pdb
+import os
+import glob
+import gzip
+import ecole
+
 def create_dataset(num_buffers, num_steps, game, data_dir_prefix, trajectories_per_buffer):
     # -- load data from memory (make more efficient)
     obss = []
@@ -100,3 +107,66 @@ def create_dataset(num_buffers, num_steps, game, data_dir_prefix, trajectories_p
     print('max timestep is %d' % max(timesteps))
 
     return obss, actions, returns, done_idxs, rtg, timesteps
+
+
+def load_epochs(path):
+    epochs = _create_dataset_scip(path)
+
+    obss=[]
+    actions=[]
+    done_idxs = []
+    returns = []
+    rtg = []
+    timesteps = []
+
+    for epoch in epochs:
+        epoch_len = len(epoch) 
+        left_epoch_len = epoch_len
+        for step in epoch:
+            sample_observation, sample_action, sample_action_set, sample_scores, done = step
+            obss += [step]
+            actions += [sample_action]
+            rtg +=[-left_epoch_len]
+            timesteps += [epoch_len - left_epoch_len]
+            left_epoch_len -= 1
+            
+        returns += [-epoch_len]
+        done_idxs += [len(obss)]
+        
+    
+    return obss, actions, returns, done_idxs, rtg, timesteps
+        
+
+
+def _create_dataset_scip(path):
+    print(f'Loading imitation data from {path}...')
+    if not os.path.isdir(path):
+        raise Exception(f'Path {path} does not exist')
+    files = np.array(glob.glob(path+'/epoch*'))
+    files = np.sort(files)
+    print(f'Load {len(files)} epochs')
+    epochs = []
+    for file in files:
+        one_epoch = _load_epoch(file)
+        epochs += [one_epoch]
+
+    return epochs
+        
+        
+def _load_epoch(path):
+    examples = np.array(glob.glob(path+'/*.pkl'))
+    examples = np.sort(examples)
+    epoch =[]
+    done =  False
+    for example in examples:
+        with gzip.open(example, 'rb') as f:
+            sample = pickle.load(f)
+        epoch += [sample]
+        sample_observation, sample_action, sample_action_set, sample_scores, done = sample
+    
+    # if done is False:
+    #     print(f'path of {path} have error data')
+    #     return []
+
+    return epoch
+

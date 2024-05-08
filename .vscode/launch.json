@@ -1,0 +1,19 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        
+        {
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "/home/liutf/code/decision-transformer/atari/",
+            "args": " --seed 123 --context_length 30 --epochs 5 --model_type 'reward_conditioned' --num_steps 5000 --num_buffers 50 --game 'Breakout' --batch_size 128"
+        }
+    ]
+}

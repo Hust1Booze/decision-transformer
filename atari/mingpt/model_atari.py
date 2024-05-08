@@ -23,6 +23,7 @@ import logging
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from mingpt.bipartite_gcn import BipartiteGCN
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +157,30 @@ class GPT(nn.Module):
         self.action_embeddings = nn.Sequential(nn.Embedding(config.vocab_size, config.n_embd), nn.Tanh())
         nn.init.normal_(self.action_embeddings[0].weight, mean=0.0, std=0.02)
 
+        ##############################################################################################
+        # For Graph encoder
+        self.graph_encoder = BipartiteGCN(device='cpu', config=None,
+                 emb_size=64,
+                 num_rounds=1,
+                 aggregator='add',
+                 activation=None,
+                 cons_nfeats=5,
+                 edge_nfeats=1,
+                 var_nfeats=19,
+                 num_heads=1,
+                 head_depth=2,
+                 linear_weight_init='normal',
+                 linear_bias_init='zeros',
+                 layernorm_weight_init=None,
+                 layernorm_bias_init=None,
+                 head_aggregator=None,
+                 include_edge_features=True,
+                 use_old_heads_implementation=False,
+                 profile_time=False,
+                 print_warning=True,
+                 name='gnn',
+                 )
+        
     def get_block_size(self):
         return self.block_size
 
@@ -223,6 +248,7 @@ class GPT(nn.Module):
         # targets: (batch, block_size, 1)
         # rtgs: (batch, block_size, 1)
         # timesteps: (batch, 1, 1)
+        graph_embeddings = self.graph_encoder(states.constraint_features, states.edge_index, states.edge_attr, states.variable_features)
 
         state_embeddings = self.state_encoder(states.reshape(-1, 4, 84, 84).type(torch.float32).contiguous()) # (batch * block_size, n_embd)
         state_embeddings = state_embeddings.reshape(states.shape[0], states.shape[1], self.config.n_embd) # (batch, block_size, n_embd)
